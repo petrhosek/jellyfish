@@ -3,47 +3,67 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-int levenshtein_distance(const char *s1, const char *s2)
+int levenshtein_distance(const char *s1, size_t len1, const char *s2, size_t len2)
 {
-    size_t s1_len = strlen(s1);
-    size_t s2_len = strlen(s2);
-    size_t rows = s1_len + 1;
-    size_t cols = s2_len + 1;
-    size_t i, j;
+    int i, j, n;
+    int *r, *p1, *p2;
+    int x1, x2;
+    const char *tmp;
 
-    unsigned result;
-    unsigned d1, d2, d3;
-    unsigned *dist = malloc(rows * cols * sizeof(unsigned));
-    if (!dist) {
-        return -1;
+    /* strip common prefix */
+    while (len1 > 0 && len2 > 0 && *s1 == *s2) {
+        len1--;
+        len2--;
+        s1++; s2++;
     }
 
-    for (i = 0; i < rows; i++) {
-        dist[i * cols] = i;
+    /* strip common suffix */
+    while (len1 > 0 && len2 > 0 && s1[len1 - 1] == s2[len2 - 1]) {
+        len1--;
+        len2--;
     }
 
+    /* catch trivial cases */
+    if (len1 == 0) return len2;
+    if (len2 == 0) return len1;
 
-    for (j = 0; j < cols; j++) {
-        dist[j] = j;
+    /* swap if s2 longer than s1 */
+    if (len1 < len2)
+    {
+        tmp = s1; s1 = s2; s2 = tmp;
+        len1 ^= len2; len2 ^= len1; len1 ^= len2;
     }
 
-    for (j = 1; j < cols; j++) {
-        for (i = 1; i < rows; i++) {
-            if (s1[i - 1] == s2[j - 1]) {
-                dist[(i * cols) + j] = dist[((i - 1) * cols) + (j - 1)];
-            } else {
-                d1 = dist[((i - 1) * cols) + j] + 1;
-                d2 = dist[(i * cols) + (j - 1)] + 1;
-                d3 = dist[((i - 1) * cols) + (j - 1)] + 1;
+    /* fill initial row */
+    n = (*s1 != *s2) ? 1 : 0;
+    r = (int *)malloc(sizeof(int) * (len1 + 1));
+    for (i = 0, p1 = r; i <= len1; *p1++ = i++);
 
-                dist[(i * cols) + j] = MIN(d1, MIN(d2, d3));
+    /* calculate columnwise */
+    for (j = 1; j <= len2; ++j) {
+        x2 = r[0] + 1;
+        x1 = j;
+        /* process ljne */
+        r[0] = j;
+        for (i = 1; i <= len1; ++i) {
+            x2 -= s1[i - 1] == s2[j - 1];
+            if (++x1 > x2) {
+                x1 = x2;
             }
+            x2 = r[i] + 1;
+            if (x1 > x2) {
+                x1 = x2;
+            }
+            r[i] = x1;
         }
     }
 
-    result = dist[(cols * rows) - 1];
+    /* total edit distance */
+    n = r[len1];
 
-    free(dist);
+    /* dispose the allocated memory */
+    free(r);
 
-    return result;
+    /* return result */
+    return n;
 }

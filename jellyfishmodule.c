@@ -1,3 +1,4 @@
+#define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <math.h>
 #include "jellyfish.h"
@@ -111,24 +112,33 @@ static PyObject * jellyfish_hamming_distance(PyObject *self, PyObject *args,
     return Py_BuildValue("I", result);
 }
 
-static PyObject* jellyfish_levenshtein_distance(PyObject *self, PyObject *args)
+static PyObject *
+jellyfish_levenshtein_distance(PyObject *self, PyObject *args, PyObject *keywds)
 {
     const char *s1, *s2;
+    Py_ssize_t len1, len2;
+    PyObject *py_normal = Py_False;
     int result;
 
-    if (!PyArg_ParseTuple(args, "ss", &s1, &s2)) {
-        return NULL;
-    }
+    static char *kwlist[] = { "string1", "string2", "normalized", NULL };
 
-    result = levenshtein_distance(s1, s2);
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "s#s#|O!", kwlist,
+                                     &s1, &len1,
+                                     &s2, &len2,
+                                     &PyBool_Type, &py_normal))
+        return NULL;
+
+    result = levenshtein_distance(s1, len1, s2, len2);
     if (result == -1) {
-        // levenshtein_distance only returns failure code (-1) on
-        // failed malloc
         PyErr_NoMemory();
         return NULL;
     }
 
-    return Py_BuildValue("i", result);
+    if (PyObject_IsTrue(py_normal)) {
+        return PyFloat_FromDouble((double)result / MAX(len1, len2));
+    }
+
+    return PyInt_FromLong((long)result);
 }
 
 static PyObject* jellyfish_damerau_levenshtein_distance(PyObject *self,
@@ -328,8 +338,8 @@ static PyMethodDef jellyfish_methods[] = {
      "hamming_distance(string1, string2, ignore_case=True)\n\n"
      "Compute the Hamming distance between string1 and string2."},
 
-    {"levenshtein_distance", jellyfish_levenshtein_distance, METH_VARARGS,
-     "levenshtein_distance(string1, string2)\n\n"
+    {"levenshtein_distance", jellyfish_levenshtein_distance, METH_VARARGS|METH_KEYWORDS,
+     "levenshtein_distance(string1, string2, normalized=False)\n\n"
      "Compute the Levenshtein distance between string1 and string2."},
 
     {"damerau_levenshtein_distance", jellyfish_damerau_levenshtein_distance,

@@ -8,12 +8,16 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
+#ifndef MAX
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif
+
 double jaro_winkler(const char *str1, const char *str2, bool long_tolerance);
 double jaro_distance(const char *str1, const char *str2);
 
 size_t hamming_distance(const char *str1, const char *str2);
 
-int levenshtein_distance(const char *str1, const char *str2);
+int levenshtein_distance(const char *str1, size_t len1, const char *str2, size_t len2);
 
 int damerau_levenshtein_distance(const char *str1, const char *str2);
 
